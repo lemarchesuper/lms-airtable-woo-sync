@@ -215,7 +215,7 @@ class LMS_ATS_Admin {
 				<p>Aucune synchronisation pour l'instant.</p>
 			<?php else : ?>
 				<table class="widefat striped" style="max-width:1000px;">
-					<thead><tr><th>Date</th><th>Source</th><th>Récupérés</th><th>Créés</th><th>MàJ</th><th>Ignorés</th><th>Erreurs</th><th>Durée</th><th>Détails</th></tr></thead>
+					<thead><tr><th>Date</th><th>Source</th><th>Récupérés</th><th>Créés</th><th>MàJ</th><th>Inchangés</th><th>Ignorés</th><th>Erreurs</th><th>Durée</th><th>Détails</th></tr></thead>
 					<tbody>
 					<?php foreach ( $logs as $log ) : ?>
 						<tr>
@@ -224,6 +224,7 @@ class LMS_ATS_Admin {
 							<td><?php echo esc_html( $log['fetched'] ?? '—' ); ?></td>
 							<td><?php echo (int) ( $log['created'] ?? 0 ); ?></td>
 							<td><?php echo (int) ( $log['updated'] ?? 0 ); ?></td>
+							<td style="color:#646970;"><?php echo (int) ( $log['unchanged'] ?? 0 ); ?></td>
 							<td><?php echo (int) ( $log['skipped'] ?? 0 ); ?></td>
 							<td<?php echo ! empty( $log['errors'] ) ? ' style="color:#b32d2e;font-weight:bold;"' : ''; ?>><?php echo (int) ( $log['errors'] ?? 0 ); ?></td>
 							<td><?php echo esc_html( ( $log['duration'] ?? 0 ) . ' s' ); ?></td>

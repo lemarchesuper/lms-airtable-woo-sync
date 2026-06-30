@@ -9,6 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class LMS_ATS_Sync_Engine {
 
+	// Meta stockant l'empreinte des dernières valeurs synchronisées (détection de changement).
+	const HASH_META = '_airtable_sync_hash';
+
 	/** @var array */
 	private $settings;
 	/** @var array Messages accumulés pour le compte-rendu. */
@@ -28,14 +31,15 @@ class LMS_ATS_Sync_Engine {
 		$start = microtime( true );
 
 		$report = array(
-			'source'   => $source,
-			'created'  => 0,
-			'updated'  => 0,
-			'skipped'  => 0,
-			'errors'   => 0,
-			'messages' => array(),
-			'dry_run'  => (int) $this->settings['dry_run'],
-			'duration' => 0,
+			'source'    => $source,
+			'created'   => 0,
+			'updated'   => 0,
+			'unchanged' => 0,
+			'skipped'   => 0,
+			'errors'    => 0,
+			'messages'  => array(),
+			'dry_run'   => (int) $this->settings['dry_run'],
+			'duration'  => 0,
 		);
 
 		// Garde-fou : token requis.
@@ -81,6 +85,8 @@ class LMS_ATS_Sync_Engine {
 					$report['created']++;
 				} elseif ( 'updated' === $outcome['status'] ) {
 					$report['updated']++;
+				} elseif ( 'unchanged' === $outcome['status'] ) {
+					$report['unchanged']++;
 				} else {
 					$report['skipped']++;
 				}
@@ -112,33 +118,16 @@ class LMS_ATS_Sync_Engine {
 	 * @return array{status:string, product_id:int}
 	 */
 	private function upsert_product( $record_id, array $fields, array $map ) {
-		$match_key  = $this->settings['match_meta_key'];
-		$dry_run    = ! empty( $this->settings['dry_run'] );
-		$product_id = $this->find_product_by_record_id( $record_id );
+		$match_key = $this->settings['match_meta_key'];
+		$dry_run   = ! empty( $this->settings['dry_run'] );
 
-		// Création si absent.
-		if ( ! $product_id ) {
-			if ( empty( $this->settings['create_missing'] ) ) {
-				return array( 'status' => 'skipped', 'product_id' => 0 );
-			}
-			if ( $dry_run ) {
-				return array( 'status' => 'created', 'product_id' => 0 );
-			}
-			$product = new WC_Product_Simple();
-			$product->update_meta_data( $match_key, $record_id );
-			$is_new = true;
-		} else {
-			$product = wc_get_product( $product_id );
-			if ( ! $product ) {
-				return array( 'status' => 'skipped', 'product_id' => 0 );
-			}
-			$is_new = false;
-		}
+		// 1) Résoudre toutes les valeurs depuis le mapping (sans rien écrire encore).
+		$core     = array(); // champ natif WooCommerce => valeur
+		$meta     = array(); // meta non-ACF => valeur
+		$acf      = array(); // champ ACF => valeur (écrit via update_field après save)
+		$cat_path = null;    // chemin de catégorie ['Parent','Enfant']
+		$tax      = array(); // taxonomie => nom de terme
 
-		// Application des règles de mapping.
-		$category_ids    = null;
-		$tax_assignments = array();
-		$acf_assignments = array(); // champs ACF, écrits après save (update_field a besoin de l'ID).
 		foreach ( $map as $rule ) {
 			$source = $rule['source'] ?? '';
 			if ( '' === $source || ! array_key_exists( $source, $fields ) ) {
@@ -146,7 +135,6 @@ class LMS_ATS_Sync_Engine {
 			}
 			$value = $fields[ $source ];
 
-			// Transform éventuel.
 			if ( ! empty( $rule['transform'] ) && is_callable( array( 'LMS_ATS_Transforms', $rule['transform'] ) ) ) {
 				$value = call_user_func( array( 'LMS_ATS_Transforms', $rule['transform'] ), $value );
 			} else {
@@ -155,7 +143,7 @@ class LMS_ATS_Sync_Engine {
 
 			switch ( $rule['type'] ) {
 				case 'core':
-					$this->apply_core( $product, $rule['core'], $value );
+					$core[ $rule['core'] ] = $value;
 					break;
 
 				case 'meta':
@@ -164,39 +152,86 @@ class LMS_ATS_Sync_Engine {
 						break; // clé non résolue : on n'écrit pas.
 					}
 					if ( ! empty( $rule['acf'] ) ) {
-						$acf_assignments[ $meta_key ] = $value; // écrit après save via update_field().
+						$acf[ $meta_key ] = $value;
 					} else {
-						$product->update_meta_data( $meta_key, $value );
+						$meta[ $meta_key ] = $value;
 					}
 					break;
 
 				case 'category':
-					$category_ids = $this->resolve_category_ids( (array) $value, $dry_run );
+					$cat_path = array_values( (array) $value );
 					break;
 
 				case 'taxonomy':
-					$tax       = $rule['taxonomy'] ?? '';
+					$taxonomy  = $rule['taxonomy'] ?? '';
 					$term_name = trim( (string) LMS_ATS_Transforms::scalar( $value ) );
-					if ( $tax && '' !== $term_name ) {
-						$tax_assignments[ $tax ] = $term_name;
+					if ( $taxonomy && '' !== $term_name ) {
+						$tax[ $taxonomy ] = $term_name;
 					}
 					break;
 			}
 		}
 
-		if ( is_array( $category_ids ) && ! empty( $category_ids ) ) {
-			$product->set_category_ids( $category_ids );
+		// 2) Empreinte du contenu à écrire — pour sauter les produits inchangés.
+		ksort( $core );
+		ksort( $meta );
+		ksort( $acf );
+		ksort( $tax );
+		$hash = md5( wp_json_encode( array( $core, $meta, $acf, $cat_path, $tax ) ) );
+
+		// 3) Localiser le produit existant.
+		$product_id = $this->find_product_by_record_id( $record_id );
+
+		// Inchangé : empreinte identique → aucune réécriture (le cœur de l'optimisation).
+		if ( $product_id ) {
+			$stored = get_post_meta( $product_id, self::HASH_META, true );
+			if ( $stored && $stored === $hash ) {
+				return array( 'status' => 'unchanged', 'product_id' => $product_id );
+			}
 		}
 
+		// Produit absent + création désactivée → on saute.
+		if ( ! $product_id && empty( $this->settings['create_missing'] ) ) {
+			return array( 'status' => 'skipped', 'product_id' => 0 );
+		}
+
+		$is_new = ! $product_id;
+
+		// Mode simulation : on classe le produit sans rien écrire.
 		if ( $dry_run ) {
 			return array( 'status' => $is_new ? 'created' : 'updated', 'product_id' => $is_new ? 0 : $product_id );
 		}
 
+		// 4) Écriture (produit nouveau ou modifié uniquement).
+		if ( $is_new ) {
+			$product = new WC_Product_Simple();
+			$product->update_meta_data( $match_key, $record_id );
+		} else {
+			$product = wc_get_product( $product_id );
+			if ( ! $product ) {
+				return array( 'status' => 'skipped', 'product_id' => 0 );
+			}
+		}
+
+		foreach ( $core as $core_field => $val ) {
+			$this->apply_core( $product, $core_field, $val );
+		}
+		foreach ( $meta as $meta_key => $val ) {
+			$product->update_meta_data( $meta_key, $val );
+		}
+		if ( is_array( $cat_path ) && ! empty( $cat_path ) ) {
+			$ids = $this->resolve_category_ids( $cat_path, false );
+			if ( ! empty( $ids ) ) {
+				$product->set_category_ids( $ids );
+			}
+		}
+
+		$product->update_meta_data( self::HASH_META, $hash ); // mémorise l'empreinte de ce sync.
 		$saved_id = $product->save();
 
 		// Champs ACF : après save (update_field pose la valeur + la référence `_champ = field_xxx`).
 		$has_acf = function_exists( 'update_field' );
-		foreach ( $acf_assignments as $key => $val ) {
+		foreach ( $acf as $key => $val ) {
 			if ( $has_acf ) {
 				update_field( $key, $val, $saved_id );
 			} else {
@@ -209,7 +244,7 @@ class LMS_ATS_Sync_Engine {
 		}
 
 		// Taxonomies : après save (nécessite l'ID produit).
-		foreach ( $tax_assignments as $taxonomy => $term_name ) {
+		foreach ( $tax as $taxonomy => $term_name ) {
 			$this->assign_term( $saved_id, $taxonomy, $term_name );
 		}
 

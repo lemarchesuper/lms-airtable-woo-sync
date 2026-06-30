@@ -45,6 +45,14 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.3.0 =
+* Détection de changement par empreinte (hash) : seuls les produits réellement
+  modifiés sont réécrits. Sur un run complet, les centaines de produits inchangés
+  sont sautés (aucune écriture, aucun update_field). Empreinte stockée dans le
+  meta _airtable_sync_hash.
+* Journal : nouvelle colonne « Inchangés » (rapport de ce qui a bougé).
+* 1er run complet = baseline (tout est tamponné), runs suivants = seuls les modifiés.
+
 = 0.2.0 =
 * Champs custom = ACF : écriture via update_field() (pose la référence de clé, vital en création).
 * Mapping réel relevé en live (REST produit 5184) : SKU=EAN13, prix Consigned, net_price,
