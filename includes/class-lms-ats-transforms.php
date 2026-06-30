@@ -44,14 +44,33 @@ class LMS_ATS_Transforms {
 	}
 
 	/**
-	 * Réduit une valeur Airtable (parfois tableau pour lookups/links) à un scalaire.
+	 * Normalise un prix : « 3,90 » / « 3 90 » → « 3.90 ». Vide si non numérique.
+	 */
+	public static function price( $value ) {
+		$v = trim( (string) self::scalar( $value ) );
+		if ( '' === $v ) {
+			return '';
+		}
+		$v = str_replace( array( ' ', "\xc2\xa0" ), '', $v ); // espaces / insécables.
+		$v = str_replace( ',', '.', $v );
+		return is_numeric( $v ) ? $v : '';
+	}
+
+	/**
+	 * Réduit une valeur Airtable (parfois tableau/objet pour lookups/links/select) à un scalaire.
 	 */
 	public static function scalar( $value ) {
 		if ( is_array( $value ) ) {
-			// Lookup/link Airtable : on prend le premier élément.
+			// Objet select/collaborateur : {id, name, color}.
+			if ( isset( $value['name'] ) ) {
+				return $value['name'];
+			}
+			if ( isset( $value['value'] ) ) {
+				return $value['value'];
+			}
+			// Lookup/link/multipleSelects : tableau → premier élément.
 			$first = reset( $value );
 			if ( is_array( $first ) ) {
-				// ex. {id, name} ou pièce jointe.
 				return $first['name'] ?? ( $first['value'] ?? '' );
 			}
 			return $first;

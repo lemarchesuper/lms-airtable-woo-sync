@@ -182,9 +182,22 @@ class LMS_ATS_Admin {
 				<thead><tr><th>Champ Airtable</th><th>Type</th><th>Cible Woo</th></tr></thead>
 				<tbody>
 				<?php foreach ( LMS_ATS_Field_Map::get() as $rule ) :
-					$target = $rule['type'] === 'core' ? ( 'natif: ' . $rule['core'] )
-						: ( $rule['type'] === 'meta' ? ( 'meta: ' . $rule['meta_key'] )
-						: $rule['type'] );
+					switch ( $rule['type'] ) {
+						case 'core':
+							$target = 'natif : ' . $rule['core'];
+							break;
+						case 'meta':
+							$target = 'meta : ' . $rule['meta_key'];
+							break;
+						case 'taxonomy':
+							$target = 'taxonomie : ' . $rule['taxonomy'];
+							break;
+						case 'category':
+							$target = 'catégories produit (product_cat)';
+							break;
+						default:
+							$target = $rule['type'];
+					}
 					$todo = ( isset( $rule['meta_key'] ) && 0 === strpos( $rule['meta_key'], 'TODO_' ) );
 					?>
 					<tr<?php echo $todo ? ' style="background:#fff8e5;"' : ''; ?>>

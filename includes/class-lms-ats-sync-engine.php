@@ -136,7 +136,8 @@ class LMS_ATS_Sync_Engine {
 		}
 
 		// Application des règles de mapping.
-		$category_ids = null;
+		$category_ids    = null;
+		$tax_assignments = array();
 		foreach ( $map as $rule ) {
 			$source = $rule['source'] ?? '';
 			if ( '' === $source || ! array_key_exists( $source, $fields ) ) {
@@ -168,9 +169,12 @@ class LMS_ATS_Sync_Engine {
 					$category_ids = $this->resolve_category_ids( (array) $value, $dry_run );
 					break;
 
-				case 'producer':
-					// En attente de confirmation (taxonomie vs meta). Stocké en meta provisoire.
-					$product->update_meta_data( '_lms_producteur_wc_id', LMS_ATS_Transforms::scalar( $value ) );
+				case 'taxonomy':
+					$tax       = $rule['taxonomy'] ?? '';
+					$term_name = trim( (string) LMS_ATS_Transforms::scalar( $value ) );
+					if ( $tax && '' !== $term_name ) {
+						$tax_assignments[ $tax ] = $term_name;
+					}
 					break;
 			}
 		}
@@ -184,10 +188,38 @@ class LMS_ATS_Sync_Engine {
 		}
 
 		$saved_id = $product->save();
+
+		// Taxonomies : après save (nécessite l'ID produit).
+		foreach ( $tax_assignments as $taxonomy => $term_name ) {
+			$this->assign_term( $saved_id, $taxonomy, $term_name );
+		}
+
 		return array(
 			'status'     => $is_new ? 'created' : 'updated',
 			'product_id' => $saved_id,
 		);
+	}
+
+	/**
+	 * Pose un terme de taxonomie sur le produit (crée le terme s'il manque).
+	 */
+	private function assign_term( $product_id, $taxonomy, $term_name ) {
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			$this->messages[] = sprintf( 'Taxonomie « %s » inexistante (terme « %s » ignoré).', $taxonomy, $term_name );
+			return;
+		}
+		$term = get_term_by( 'name', $term_name, $taxonomy );
+		if ( ! $term ) {
+			$created = wp_insert_term( $term_name, $taxonomy );
+			if ( is_wp_error( $created ) ) {
+				$this->messages[] = sprintf( 'Taxonomie %s « %s » : %s', $taxonomy, $term_name, $created->get_error_message() );
+				return;
+			}
+			$term_id = (int) $created['term_id'];
+		} else {
+			$term_id = (int) $term->term_id;
+		}
+		wp_set_object_terms( $product_id, array( $term_id ), $taxonomy, false );
 	}
 
 	/**

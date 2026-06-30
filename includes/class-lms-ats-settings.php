@@ -21,7 +21,7 @@ class LMS_ATS_Settings {
 			'base_id'          => 'appmHw1H1n5WYIS0N', // Base « Odoo Products ».
 			'table_id'         => 'tblZXnFdvmME2D4sm', // Table « WEB | Products ».
 			'view'             => 'To Import WC',       // Vue source (filtre WC | To Import).
-			'match_meta_key'   => '_airtable_record_id', // meta_key Woo qui stocke le Record ID Airtable.
+			'match_meta_key'   => 'airtable_record_id', // meta_key JetEngine qui stocke le Record ID Airtable.
 			'cron_frequency'   => 'hourly',             // disabled | lms_ats_5min | lms_ats_15min | hourly.
 			'absent_policy'    => 'ignore',             // ignore | outofstock | draft (que faire si un produit Woo n'est plus dans la vue).
 			'dry_run'          => 0,                     // 1 = simulation (n'écrit rien, log seulement).
