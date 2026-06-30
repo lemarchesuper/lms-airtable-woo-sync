@@ -45,6 +45,15 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.5.0 =
+* Auto-réparation : un produit présent dans la vue est (re)publié. Un produit passé
+  en brouillon par erreur (politique absent sur une vue partielle) est republié dès
+  qu'il réapparaît dans la vue synchronisée.
+* La détection « inchangé » exige désormais aussi le statut publié : un produit en
+  brouillon mais inchangé n'est plus sauté, il est republié.
+* Permet de récupérer un catalogue passé en brouillon par erreur : pointer sur la
+  vue complète et synchroniser.
+
 = 0.4.0 =
 * Politique « produit absent » optimisée : n'agit que sur les produits PAS DÉJÀ
   dans l'état cible (ex. déjà en brouillon → ignoré). Évite de re-traiter tout le

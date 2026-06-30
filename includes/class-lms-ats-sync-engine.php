@@ -182,10 +182,11 @@ class LMS_ATS_Sync_Engine {
 		// 3) Localiser le produit existant.
 		$product_id = $this->find_product_by_record_id( $record_id );
 
-		// Inchangé : empreinte identique → aucune réécriture (le cœur de l'optimisation).
+		// Inchangé : empreinte identique ET déjà publié → aucune réécriture.
+		// (Un produit revenu dans la vue mais en brouillon doit être republié : on ne le saute pas.)
 		if ( $product_id ) {
 			$stored = get_post_meta( $product_id, self::HASH_META, true );
-			if ( $stored && $stored === $hash ) {
+			if ( $stored && $stored === $hash && 'publish' === get_post_status( $product_id ) ) {
 				return array( 'status' => 'unchanged', 'product_id' => $product_id );
 			}
 		}
@@ -212,6 +213,9 @@ class LMS_ATS_Sync_Engine {
 				return array( 'status' => 'skipped', 'product_id' => 0 );
 			}
 		}
+
+		// Présent dans la vue → doit être publié (republie un produit revenu après brouillon).
+		$product->set_status( 'publish' );
 
 		foreach ( $core as $core_field => $val ) {
 			$this->apply_core( $product, $core_field, $val );
