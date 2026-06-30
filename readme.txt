@@ -45,6 +45,12 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.6.2 =
+* Versionnage de la logique de sync (SYNC_LOGIC_VERSION) inclus dans l'empreinte :
+  le correctif catégories de 0.6.1 s'applique aussi aux produits DÉJÀ synchronisés.
+  Effet : la 1re synchro après cette mise à jour réécrit tout le catalogue une fois
+  (re-catégorisation correcte), puis la détection « inchangé » se restabilise.
+
 = 0.6.1 =
 * Correctif catégories : recherche par nom ET parent (term_exists) au lieu de
   get_term_by('name'). Corrige l'erreur « Un terme avec ce nom existe déjà pour

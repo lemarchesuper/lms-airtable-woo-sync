@@ -12,6 +12,11 @@ class LMS_ATS_Sync_Engine {
 	// Meta stockant l'empreinte des dernières valeurs synchronisées (détection de changement).
 	const HASH_META = '_airtable_sync_hash';
 
+	// Version de la LOGIQUE de synchro. À incrémenter quand on corrige la façon d'écrire
+	// (ex. résolution des catégories) : ça change toutes les empreintes → une réécriture
+	// complète unique applique le correctif à l'existant, puis la détection se restabilise.
+	const SYNC_LOGIC_VERSION = 2;
+
 	/** @var array */
 	private $settings;
 	/** @var array Messages accumulés pour le compte-rendu. */
@@ -177,7 +182,7 @@ class LMS_ATS_Sync_Engine {
 		ksort( $meta );
 		ksort( $acf );
 		ksort( $tax );
-		$hash = md5( wp_json_encode( array( $core, $meta, $acf, $cat_path, $tax ) ) );
+		$hash = md5( wp_json_encode( array( self::SYNC_LOGIC_VERSION, $core, $meta, $acf, $cat_path, $tax ) ) );
 
 		// 3) Localiser le produit existant.
 		$product_id = $this->find_product_by_record_id( $record_id );
