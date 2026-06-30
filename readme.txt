@@ -45,6 +45,11 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.6.0 =
+* UX : page d'admin réorganisée en 3 onglets (Paramètres / Mapping / Journal).
+* Après une synchro manuelle, redirection automatique sur l'onglet Journal.
+* Bouton « Synchroniser maintenant » disponible sur Paramètres et Journal.
+
 = 0.5.0 =
 * Auto-réparation : un produit présent dans la vue est (re)publié. Un produit passé
   en brouillon par erreur (politique absent sur une vue partielle) est republié dès

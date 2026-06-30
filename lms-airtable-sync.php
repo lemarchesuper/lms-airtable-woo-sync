@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LMS Airtable Sync
  * Description: Synchronisation descendante (pull) Airtable → WooCommerce pour Le Marché Super. Récupère les produits depuis Airtable (base « Odoo Products », table « WEB | Products », vue « To Import WC ») et crée/met à jour les produits WooCommerce. Matching par un meta_key dédié contenant le Record ID Airtable.
- * Version: 0.5.0
+ * Version: 0.6.0
  * Author: Le Marché Super
  * Requires PHP: 7.4
  * Requires at least: 6.0
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Pas d'accès direct.
 }
 
-define( 'LMS_ATS_VERSION', '0.5.0' );
+define( 'LMS_ATS_VERSION', '0.6.0' );
 define( 'LMS_ATS_FILE', __FILE__ );
 define( 'LMS_ATS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LMS_ATS_URL', plugin_dir_url( __FILE__ ) );
