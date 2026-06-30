@@ -45,6 +45,12 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.6.1 =
+* Correctif catégories : recherche par nom ET parent (term_exists) au lieu de
+  get_term_by('name'). Corrige l'erreur « Un terme avec ce nom existe déjà pour
+  ce parent » sur les noms de catégorie présents sous plusieurs parents (ex.
+  « Fruits Sec »), qui rangeait à tort le produit dans la catégorie parente.
+
 = 0.6.0 =
 * UX : page d'admin réorganisée en 3 onglets (Paramètres / Mapping / Journal).
 * Après une synchro manuelle, redirection automatique sur l'onglet Journal.

@@ -368,27 +368,34 @@ class LMS_ATS_Sync_Engine {
 			if ( '' === $name ) {
 				continue;
 			}
-			$term = get_term_by( 'name', $name, 'product_cat' );
-			// Affine par parent pour gérer les noms identiques à des niveaux différents.
-			if ( $term && (int) $term->parent !== (int) $parent_id ) {
-				$term = false;
+
+			// Recherche par nom ET parent (gère les noms identiques sous des parents différents).
+			$existing = term_exists( $name, 'product_cat', $parent_id );
+			if ( $existing && ! empty( $existing['term_id'] ) ) {
+				$leaf_id   = (int) $existing['term_id'];
+				$parent_id = $leaf_id;
+				continue;
 			}
 
-			if ( ! $term ) {
-				if ( $dry_run ) {
-					return array(); // En simulation, on ne crée pas de terme.
-				}
-				$created = wp_insert_term( $name, 'product_cat', array( 'parent' => $parent_id ) );
-				if ( is_wp_error( $created ) ) {
-					$this->messages[] = 'Catégorie « ' . $name . " » : " . $created->get_error_message();
-					break;
-				}
-				$leaf_id   = (int) $created['term_id'];
-				$parent_id = $leaf_id;
-			} else {
-				$leaf_id   = (int) $term->term_id;
-				$parent_id = $leaf_id;
+			if ( $dry_run ) {
+				return array(); // En simulation, on ne crée pas de terme.
 			}
+
+			$created = wp_insert_term( $name, 'product_cat', array( 'parent' => $parent_id ) );
+			if ( is_wp_error( $created ) ) {
+				// Le terme existe finalement (course / casse / accent) : on récupère son ID au lieu d'échouer.
+				$fallback = term_exists( $name, 'product_cat', $parent_id );
+				if ( $fallback && ! empty( $fallback['term_id'] ) ) {
+					$leaf_id   = (int) $fallback['term_id'];
+					$parent_id = $leaf_id;
+					continue;
+				}
+				$this->messages[] = 'Catégorie « ' . $name . ' » : ' . $created->get_error_message();
+				break;
+			}
+
+			$leaf_id   = (int) $created['term_id'];
+			$parent_id = $leaf_id;
 		}
 
 		return $leaf_id ? array( $leaf_id ) : array();
