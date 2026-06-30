@@ -420,26 +420,37 @@ class LMS_ATS_Sync_Engine {
 			return 'Politique absents : aucun produit concerné.';
 		}
 
-		$count = 0;
+		// On n'agit que sur les produits PAS DÉJÀ dans l'état cible (évite de re-traiter
+		// tout le lot d'absents à chaque run).
+		$changed = 0;
 		foreach ( $absent as $pid ) {
-			if ( $dry_run ) {
-				$count++;
-				continue;
-			}
-			$product = wc_get_product( $pid );
-			if ( ! $product ) {
-				continue;
-			}
-			if ( 'outofstock' === $policy ) {
-				$product->set_stock_status( 'outofstock' );
-				$product->save();
-				$count++;
-			} elseif ( 'draft' === $policy ) {
-				wp_update_post( array( 'ID' => $pid, 'post_status' => 'draft' ) );
-				$count++;
+			if ( 'draft' === $policy ) {
+				if ( 'draft' === get_post_status( $pid ) ) {
+					continue; // déjà en brouillon.
+				}
+				if ( ! $dry_run ) {
+					wp_update_post( array( 'ID' => $pid, 'post_status' => 'draft' ) );
+				}
+				$changed++;
+			} elseif ( 'outofstock' === $policy ) {
+				$product = wc_get_product( $pid );
+				if ( ! $product || 'outofstock' === $product->get_stock_status() ) {
+					continue; // déjà en rupture (ou introuvable).
+				}
+				if ( ! $dry_run ) {
+					$product->set_stock_status( 'outofstock' );
+					$product->save();
+				}
+				$changed++;
 			}
 		}
 
-		return sprintf( 'Politique absents (%s) : %d produit(s) traité(s).', $policy, $count );
+		return sprintf(
+			'Politique absents (%s) : %d absent(s) au total, %d nouvellement traité(s)%s.',
+			$policy,
+			count( $absent ),
+			$changed,
+			$dry_run ? ' [simu]' : ''
+		);
 	}
 }

@@ -45,6 +45,15 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.4.0 =
+* Politique « produit absent » optimisée : n'agit que sur les produits PAS DÉJÀ
+  dans l'état cible (ex. déjà en brouillon → ignoré). Évite de re-traiter tout le
+  lot d'absents à chaque run.
+* Journal : message « N absent(s) au total, M nouvellement traité(s) », visible aussi
+  en mode simulation pour estimer l'impact avant d'activer draft/outofstock.
+* Rappel : la politique s'applique à tous les produits gérés absents de la vue —
+  ne l'activer (draft/outofstock) qu'avec la vue COMPLÈTE, jamais une vue partielle.
+
 = 0.3.0 =
 * Détection de changement par empreinte (hash) : seuls les produits réellement
   modifiés sont réécrits. Sur un run complet, les centaines de produits inchangés
