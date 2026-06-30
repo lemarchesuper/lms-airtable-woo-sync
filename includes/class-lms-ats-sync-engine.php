@@ -246,10 +246,14 @@ class LMS_ATS_Sync_Engine {
 				$product->set_description( (string) $value );
 				break;
 			case 'sku':
+				$sku = trim( (string) $value );
+				if ( '' === $sku ) {
+					break; // Ne jamais effacer un SKU existant avec une valeur vide.
+				}
 				try {
-					$product->set_sku( (string) $value );
+					$product->set_sku( $sku );
 				} catch ( Exception $e ) {
-					$this->messages[] = 'SKU refusé (' . $value . ') : ' . $e->getMessage();
+					$this->messages[] = 'SKU refusé (' . $sku . ') : ' . $e->getMessage();
 				}
 				break;
 		}

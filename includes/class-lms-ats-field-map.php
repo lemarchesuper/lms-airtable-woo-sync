@@ -38,6 +38,13 @@ class LMS_ATS_Field_Map {
 				'meta_key' => 'product_displayed_name', // JetEngine, requis côté thème.
 			),
 
+			// --- EAN13 → SKU WooCommerce (le matching utilise airtable_record_id, le SKU est donc libre) ---
+			array(
+				'source' => 'NEW Product EAN13',
+				'type'   => 'core',
+				'core'   => 'sku',
+			),
+
 			// --- Prix ---
 			// ⚠️ À CONFIRMER : le prix WooCommerce facturé (_regular_price) =
 			//    « WC | Consigned Sale Price » (net + consigne) ? Hypothèse retenue.
