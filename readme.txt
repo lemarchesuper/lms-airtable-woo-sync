@@ -45,6 +45,14 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.2.0 =
+* Champs custom = ACF : écriture via update_field() (pose la référence de clé, vital en création).
+* Mapping réel relevé en live (REST produit 5184) : SKU=EAN13, prix Consigned, net_price,
+  consigne_price, product_package/price_unit/unit_price, product_displayed_name.
+* Taxonomies pays/label/packaging. Catégories hiérarchiques.
+* Fix champs de liaison Airtable : appel en cellFormat=string (liens/choix → noms, comme le CSV).
+* Producteur et attributs WooCommerce reportés (hors scope V1).
+
 = 0.1.0 =
 * Version initiale : pull Airtable, upsert Woo (natifs + meta + catégories hiérarchiques),
   page de réglages, mode simulation, journal, cron, bouton de synchro manuelle.
