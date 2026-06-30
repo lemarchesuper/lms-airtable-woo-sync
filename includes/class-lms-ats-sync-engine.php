@@ -138,6 +138,7 @@ class LMS_ATS_Sync_Engine {
 		// Application des règles de mapping.
 		$category_ids    = null;
 		$tax_assignments = array();
+		$acf_assignments = array(); // champs ACF, écrits après save (update_field a besoin de l'ID).
 		foreach ( $map as $rule ) {
 			$source = $rule['source'] ?? '';
 			if ( '' === $source || ! array_key_exists( $source, $fields ) ) {
@@ -159,8 +160,12 @@ class LMS_ATS_Sync_Engine {
 
 				case 'meta':
 					$meta_key = $rule['meta_key'] ?? '';
-					// On n'écrit pas les clés encore non résolues (TODO_*) pour ne pas polluer la base.
-					if ( $meta_key && 0 !== strpos( $meta_key, 'TODO_' ) ) {
+					if ( ! $meta_key || 0 === strpos( $meta_key, 'TODO_' ) ) {
+						break; // clé non résolue : on n'écrit pas.
+					}
+					if ( ! empty( $rule['acf'] ) ) {
+						$acf_assignments[ $meta_key ] = $value; // écrit après save via update_field().
+					} else {
 						$product->update_meta_data( $meta_key, $value );
 					}
 					break;
@@ -188,6 +193,20 @@ class LMS_ATS_Sync_Engine {
 		}
 
 		$saved_id = $product->save();
+
+		// Champs ACF : après save (update_field pose la valeur + la référence `_champ = field_xxx`).
+		$has_acf = function_exists( 'update_field' );
+		foreach ( $acf_assignments as $key => $val ) {
+			if ( $has_acf ) {
+				update_field( $key, $val, $saved_id );
+			} else {
+				update_post_meta( $saved_id, $key, $val ); // repli : valeur brute sans référence ACF.
+			}
+		}
+		// En création : pose aussi la référence ACF du champ de matching.
+		if ( $is_new && $has_acf ) {
+			update_field( $this->settings['match_meta_key'], $record_id, $saved_id );
+		}
 
 		// Taxonomies : après save (nécessite l'ID produit).
 		foreach ( $tax_assignments as $taxonomy => $term_name ) {

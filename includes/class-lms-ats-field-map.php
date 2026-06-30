@@ -6,11 +6,13 @@
  *   - 'source'   : nom EXACT du champ Airtable (tel que renvoyé par l'API REST).
  *   - 'type'     : 'core' | 'meta' | 'category' | 'taxonomy'.
  *   - 'core'     : (si type=core) title|regular_price|stock_status|catalog_visibility|description|sku.
- *   - 'meta_key' : (si type=meta) étiquette de stockage WordPress (clé JetEngine, sans underscore).
+ *   - 'meta_key' : (si type=meta) nom du champ (clé ACF, sans underscore).
+ *   - 'acf'      : (si type=meta) true = champ ACF → écrit via update_field() pour poser
+ *                  aussi la référence de clé `_champ = field_xxx` (indispensable en création).
  *   - 'taxonomy' : (si type=taxonomy) slug de la taxonomie (terme créé s'il manque).
  *   - 'transform': (optionnel) nom d'une méthode statique de LMS_ATS_Transforms.
  *
- * meta_key relevés sur le site (JetEngine) le 2026-06-30 depuis une fiche produit.
+ * Champs ACF relevés en live le 2026-06-30 (REST API, produit 5184).
  * Surchargeable sans toucher ce fichier via le filtre 'lms_ats_field_map'.
  */
 
@@ -33,9 +35,10 @@ class LMS_ATS_Field_Map {
 				'core'   => 'title',
 			),
 			array(
-				'source'   => 'AT | Product Name Poids',
+				'source'   => 'AT | Product Name', // sans le poids (le titre WC, lui, inclut le poids).
 				'type'     => 'meta',
-				'meta_key' => 'product_displayed_name', // JetEngine, requis côté thème.
+				'meta_key' => 'product_displayed_name',
+				'acf'      => true,
 			),
 
 			// --- EAN13 → SKU WooCommerce (le matching utilise airtable_record_id, le SKU est donc libre) ---
@@ -58,14 +61,16 @@ class LMS_ATS_Field_Map {
 			array(
 				'source'    => 'WC | Net Sale Price',
 				'type'      => 'meta',
-				'meta_key'  => 'net_price', // affichage « prix hors consigne ».
+				'meta_key'  => 'net_price', // affichage « prix à afficher (net de consigne) ».
 				'transform' => 'price',
+				'acf'       => true,
 			),
 			array(
 				'source'    => 'Consigne | Consigne Price',
 				'type'      => 'meta',
 				'meta_key'  => 'consigne_price',
 				'transform' => 'price',
+				'acf'       => true,
 			),
 
 			// --- Stock / visibilité / description ---
@@ -87,22 +92,25 @@ class LMS_ATS_Field_Map {
 				'core'   => 'description',
 			),
 
-			// --- Conditionnement (champs meta JetEngine) ---
+			// --- Conditionnement (champs ACF) ---
 			array(
 				'source'   => 'WC | Product Packaging', // ex. « 500gr », « 1kg »
 				'type'     => 'meta',
 				'meta_key' => 'product_package',
+				'acf'      => true,
 			),
 			array(
 				'source'    => 'WC | Price/Unit',        // ex. « 78.00 » (prix au kg)
 				'type'      => 'meta',
 				'meta_key'  => 'price_unit',
 				'transform' => 'price',
+				'acf'       => true,
 			),
 			array(
 				'source'   => 'WC | Converted Unit',     // ex. « kg »
 				'type'     => 'meta',
-				'meta_key' => 'unit_price',              // (radio kg/l/unité — nommage JetEngine).
+				'meta_key' => 'unit_price',              // (radio kg/l/unité — nommage ACF).
+				'acf'      => true,
 			),
 
 			// --- Producteur : HORS SCOPE court terme ---
