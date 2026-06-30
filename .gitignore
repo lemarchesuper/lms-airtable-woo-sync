@@ -1,0 +1,13 @@
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Dépendances éventuelles
+/vendor/
+/node_modules/
+
+# Archives de build
+*.zip

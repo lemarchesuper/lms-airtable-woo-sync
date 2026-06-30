@@ -1,0 +1,50 @@
+=== LMS Airtable Sync ===
+Contributors: lemarchesuper
+Requires at least: 6.0
+Requires PHP: 7.4
+Stable tag: 0.1.0
+
+Synchronisation descendante (pull) Airtable → WooCommerce pour Le Marché Super.
+
+== Description ==
+
+Récupère les produits depuis Airtable (base « Odoo Products », table « WEB | Products »,
+vue « To Import WC ») et crée / met à jour les produits WooCommerce correspondants.
+
+Principes :
+* Sens UNIQUE Airtable → WooCommerce. Rien n'est jamais renvoyé vers Airtable.
+* Matching par un meta_key dédié contenant le Record ID Airtable (ex. _airtable_record_id).
+* Les IMAGES ne sont jamais touchées (gérées manuellement dans WooCommerce).
+* Aucune SUPPRESSION de produit (politique « absent » configurable : ignorer / rupture / brouillon).
+* Mapping piloté par fichier, surchargeable via le filtre `lms_ats_field_map`.
+
+== Installation ==
+
+1. Copier le dossier `lms-airtable-sync/` dans `wp-content/plugins/`.
+2. Activer le plugin (WooCommerce doit être actif).
+3. WooCommerce → Airtable Sync : saisir le Token API Airtable (PAT, scope data.records:read).
+4. Vérifier Base ID / Table ID / Vue (pré-remplis).
+5. Cocher « Mode simulation » puis « Synchroniser maintenant » pour un essai à blanc.
+6. Lire le journal, décocher la simulation, relancer.
+
+== Configuration du cron fiable (o2switch) ==
+
+WP-Cron dépend du trafic. Pour un déclenchement régulier, désactiver WP-Cron interne
+et ajouter un cron cPanel, par exemple toutes les 15 minutes :
+
+    */15 * * * * wget -q -O /dev/null "https://lemarchesuper.com/wp-cron.php?doing_wp_cron"
+
+== À faire avant la mise en production ==
+
+* Remplacer les meta_key `TODO_*` dans `includes/class-lms-ats-field-map.php`
+  par les vrais noms écrits aujourd'hui par WP All Import (conditionnement, consigne,
+  attributs, EAN, producteur). Tant qu'une clé reste `TODO_*`, sa valeur n'est PAS écrite.
+* Confirmer le champ prix : « WC | Net Sale Price » vs « WC | Consigned Sale Price ».
+* Confirmer le traitement du producteur (taxonomie vs meta) — stocké provisoirement
+  dans le meta `_lms_producteur_wc_id`.
+
+== Changelog ==
+
+= 0.1.0 =
+* Version initiale : pull Airtable, upsert Woo (natifs + meta + catégories hiérarchiques),
+  page de réglages, mode simulation, journal, cron, bouton de synchro manuelle.
