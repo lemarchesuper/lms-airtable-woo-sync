@@ -105,13 +105,13 @@ class LMS_ATS_Field_Map {
 				'meta_key' => 'unit_price',              // (radio kg/l/unité — nommage JetEngine).
 			),
 
-			// --- Producteur : champ relation JetEngine ---
-			// ⚠️ À VÉRIFIER après 1er test : format attendu (ID simple vs tableau sérialisé).
-			array(
-				'source'   => 'Producteur WC ID', // ID du producteur (post WP), ex. 736.
-				'type'     => 'meta',
-				'meta_key' => 'produits_producteurs',
-			),
+			// --- Producteur : HORS SCOPE court terme ---
+			// Champ ACF de relation bidirectionnelle (≠ simple meta). À brancher plus tard
+			// via l'API ACF (update_field) en gérant la réciprocité. Non synchronisé pour l'instant.
+
+			// --- Attributs WooCommerce globaux (Composition, DLC, Informations…) : à faire plus tard ---
+			// Attributs globaux (pa_*), renseignés partiellement. Nécessite les slugs pa_* +
+			// gestion des termes. Reporté après validation de la synchro de base.
 
 			// --- Catégories produit hiérarchiques « Parent>Enfant » ---
 			array(
