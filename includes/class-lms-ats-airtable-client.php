@@ -21,6 +21,13 @@ class LMS_ATS_Airtable_Client {
 	const PAGE_SIZE  = 100;          // Max Airtable.
 	const THROTTLE_US = 220000;      // ~0,22 s entre deux requêtes → < 5 req/s.
 
+	// cellFormat=string : valeurs rendues comme dans l'UI / le CSV (liens → noms,
+	// choix → noms, nombres formatés). Évite de recevoir les IDs des champs de liaison.
+	// Requiert timeZone + userLocale. userLocale=en → décimales avec point (comme le CSV).
+	const CELL_FORMAT  = 'string';
+	const TIME_ZONE    = 'Europe/Paris';
+	const USER_LOCALE  = 'en';
+
 	public function __construct( $token, $base_id, $table_id ) {
 		$this->token    = $token;
 		$this->base_id  = $base_id;
@@ -77,6 +84,11 @@ class LMS_ATS_Airtable_Client {
 	 * @return array{data: ?array, error: ?string}
 	 */
 	private function request( array $query ) {
+		// Format « string » : liens/choix renvoyés comme noms (comme le CSV), pas comme IDs.
+		$query['cellFormat'] = self::CELL_FORMAT;
+		$query['timeZone']   = self::TIME_ZONE;
+		$query['userLocale'] = self::USER_LOCALE;
+
 		$url = self::API_ROOT . rawurlencode( $this->base_id ) . '/' . rawurlencode( $this->table_id );
 		$url = add_query_arg( $query, $url );
 

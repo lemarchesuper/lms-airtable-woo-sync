@@ -58,23 +58,21 @@ class LMS_ATS_Transforms {
 
 	/**
 	 * Réduit une valeur Airtable (parfois tableau/objet pour lookups/links/select) à un scalaire.
+	 * Avec cellFormat=string l'API renvoie déjà des chaînes ; ce repli gère les autres cas.
 	 */
 	public static function scalar( $value ) {
 		if ( is_array( $value ) ) {
 			// Objet select/collaborateur : {id, name, color}.
 			if ( isset( $value['name'] ) ) {
-				return $value['name'];
+				$value = $value['name'];
+			} elseif ( isset( $value['value'] ) ) {
+				$value = $value['value'];
+			} else {
+				// Lookup/link/multipleSelects : tableau → premier élément.
+				$first = reset( $value );
+				$value = is_array( $first ) ? ( $first['name'] ?? ( $first['value'] ?? '' ) ) : $first;
 			}
-			if ( isset( $value['value'] ) ) {
-				return $value['value'];
-			}
-			// Lookup/link/multipleSelects : tableau → premier élément.
-			$first = reset( $value );
-			if ( is_array( $first ) ) {
-				return $first['name'] ?? ( $first['value'] ?? '' );
-			}
-			return $first;
 		}
-		return $value;
+		return is_string( $value ) ? trim( $value ) : $value;
 	}
 }
