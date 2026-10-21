@@ -56,17 +56,30 @@ class LMS_ATS_Sync_Engine {
 			return $report;
 		}
 
-		// 1) Pull Airtable.
-		$client = new LMS_ATS_Airtable_Client(
-			$this->settings['api_token'],
-			$this->settings['base_id'],
-			$this->settings['table_id']
-		);
+		/* 1) Pull de la source. Airtable ou l'app servent la MÊME forme
+		   ([{id, fields}]) et les mêmes noms de champs : tout ce qui suit
+		   ignore d'où viennent les données. C'est ce qui rend la bascule
+		   réversible — et comparable, tant que les deux sources coexistent. */
+		$source = isset( $this->settings['source'] ) ? $this->settings['source'] : 'airtable';
+		if ( 'app' === $source ) {
+			$client = new LMS_ATS_App_Client(
+				isset( $this->settings['app_url'] ) ? $this->settings['app_url'] : '',
+				isset( $this->settings['app_key'] ) ? $this->settings['app_key'] : ''
+			);
+			$libelle = 'app';
+		} else {
+			$client = new LMS_ATS_Airtable_Client(
+				$this->settings['api_token'],
+				$this->settings['base_id'],
+				$this->settings['table_id']
+			);
+			$libelle = 'Airtable';
+		}
 		$result = $client->fetch_all_records( $this->settings['view'] );
 
 		if ( ! empty( $result['error'] ) ) {
 			$report['errors']     = 1;
-			$report['messages'][] = 'Échec récupération Airtable : ' . $result['error'];
+			$report['messages'][] = 'Échec récupération ' . $libelle . ' : ' . $result['error'];
 			$report['duration']   = round( microtime( true ) - $start, 2 );
 			LMS_ATS_Logger::record( $report );
 			return $report;
@@ -104,8 +117,15 @@ class LMS_ATS_Sync_Engine {
 			}
 		}
 
-		// 3) Politique pour les produits absents de la vue.
-		if ( 'ignore' !== $this->settings['absent_policy'] ) {
+		/* 3) Politique pour les produits absents de la vue.
+		   PAS sur un flux partiel : l'écran propose « ?id=742 » pour éprouver UNE
+		   fiche — avec la politique « brouillon », les 749 autres seraient
+		   passées en brouillon, le site vidé pour un simple test. */
+		$partiel = ( 'app' === $source )
+			&& preg_match( '/[?&](id|limite)=/', (string) ( $this->settings['app_url'] ?? '' ) );
+		if ( $partiel ) {
+			$report['messages'][] = 'Flux partiel (?id / ?limite) : politique des absents NON appliquée.';
+		} elseif ( 'ignore' !== $this->settings['absent_policy'] ) {
 			$report['messages'][] = $this->apply_absent_policy( $touched );
 		}
 
@@ -185,7 +205,7 @@ class LMS_ATS_Sync_Engine {
 		$hash = md5( wp_json_encode( array( self::SYNC_LOGIC_VERSION, $core, $meta, $acf, $cat_path, $tax ) ) );
 
 		// 3) Localiser le produit existant.
-		$product_id = $this->find_product_by_record_id( $record_id );
+		$product_id = $this->find_product_by_record_id( $record_id, $fields );
 
 		// Inchangé : empreinte identique ET déjà publié → aucune réécriture.
 		// (Un produit revenu dans la vue mais en brouillon doit être republié : on ne le saute pas.)
@@ -340,7 +360,48 @@ class LMS_ATS_Sync_Engine {
 	 *
 	 * @return int 0 si absent.
 	 */
-	private function find_product_by_record_id( $record_id ) {
+	private function find_product_by_record_id( $record_id, $fields = array() ) {
+		$par_meta = $this->chercher_par_meta( $this->settings['match_meta_key'], $record_id );
+		if ( $par_meta ) {
+			return $par_meta;
+		}
+
+		/* ── Reprise des produits nés d'Airtable ────────────────────────────
+		   Les 750 produits en ligne portent en meta leur Record ID Airtable
+		   (« recXXXXXXXX ») ; l'app, elle, envoie son propre identifiant
+		   (« lms-742 ») — sortir d'Airtable suppose de sortir de son
+		   identifiant. Sans repli, la première synchronisation ne
+		   reconnaîtrait AUCUN produit et en créerait 750 doublons.
+
+		   On retombe donc sur ce que le produit porte déjà : l'ancien Record
+		   ID s'il est fourni, puis le SKU — qui vaut l'EAN des deux côtés et
+		   sert déjà à éclater les paniers au picking. Le nouvel identifiant
+		   est ensuite écrit par upsert_product(), et cette cascade ne sert
+		   plus qu'une fois par produit. */
+		$ancien = isset( $fields['AT | Record ID'] ) ? trim( (string) $fields['AT | Record ID'] ) : '';
+		if ( '' !== $ancien && $ancien !== $record_id ) {
+			$par_ancien = $this->chercher_par_meta( $this->settings['match_meta_key'], $ancien );
+			if ( $par_ancien ) {
+				return $par_ancien;
+			}
+		}
+
+		$sku = isset( $fields['NEW Product EAN13'] ) ? trim( (string) $fields['NEW Product EAN13'] ) : '';
+		if ( '' !== $sku && function_exists( 'wc_get_product_id_by_sku' ) ) {
+			$par_sku = (int) wc_get_product_id_by_sku( $sku );
+			if ( $par_sku ) {
+				return $par_sku;
+			}
+		}
+
+		return 0;
+	}
+
+	/** Un produit portant cette meta, quel que soit son statut. */
+	private function chercher_par_meta( $cle, $valeur ) {
+		if ( '' === (string) $valeur ) {
+			return 0;
+		}
 		$ids = get_posts( array(
 			'post_type'      => array( 'product' ),
 			'post_status'    => 'any',
@@ -349,8 +410,8 @@ class LMS_ATS_Sync_Engine {
 			'no_found_rows'  => true,
 			'meta_query'     => array(
 				array(
-					'key'   => $this->settings['match_meta_key'],
-					'value' => $record_id,
+					'key'   => $cle,
+					'value' => $valeur,
 				),
 			),
 		) );

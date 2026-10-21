@@ -17,6 +17,12 @@ class LMS_ATS_Settings {
 	 */
 	public static function defaults() {
 		return array(
+			/* Source du catalogue. 'airtable' reste le défaut : un plugin mis à
+			   jour ne doit pas changer de source tout seul sur un site en
+			   production. On bascule sciemment, depuis l'admin. */
+			'source'           => 'airtable',          // airtable | app
+			'app_url'          => '',                  // ex https://app.lemarchesuper.com/flux-web.php
+			'app_key'          => '',                  // secret partagé (FLUX_WEB_KEY côté app)
 			'api_token'        => '',                  // Personal Access Token Airtable (scope data.records:read).
 			'base_id'          => 'appmHw1H1n5WYIS0N', // Base « Odoo Products ».
 			'table_id'         => 'tblZXnFdvmME2D4sm', // Table « WEB | Products ».
@@ -55,6 +61,12 @@ class LMS_ATS_Settings {
 	public static function sanitize( array $input ) {
 		$d     = self::defaults();
 		$clean = array();
+
+		$sources = array( 'airtable', 'app' );
+		$clean['source']  = ( isset( $input['source'] ) && in_array( $input['source'], $sources, true ) )
+			? $input['source'] : $d['source'];
+		$clean['app_url'] = isset( $input['app_url'] ) ? esc_url_raw( trim( (string) $input['app_url'] ) ) : '';
+		$clean['app_key'] = isset( $input['app_key'] ) ? trim( sanitize_text_field( $input['app_key'] ) ) : '';
 
 		$clean['api_token']      = isset( $input['api_token'] ) ? trim( sanitize_text_field( $input['api_token'] ) ) : '';
 		$clean['base_id']        = isset( $input['base_id'] ) ? sanitize_text_field( $input['base_id'] ) : $d['base_id'];

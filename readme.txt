@@ -45,6 +45,16 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 
 == Changelog ==
 
+= 0.7.0 =
+* Source au choix : Airtable (défaut, inchangé) ou l'app (flux-web.php, clé X-Flux-Key).
+  Les deux servent les mêmes champs : bascule réversible depuis Réglages.
+* Reprise des produits nés d'Airtable : matching en cascade — nouvel identifiant
+  (lms-N), puis ancien Record ID (« AT | Record ID »), puis SKU (= EAN). Sans ce
+  repli, la 1re synchro depuis l'app aurait créé 750 doublons.
+* Flux vide refusé (sinon la politique des absents viderait la boutique).
+* Flux partiel (?id= / ?limite=) : politique des absents NON appliquée — un test
+  sur une fiche ne doit pas passer le reste du catalogue en brouillon.
+
 = 0.6.2 =
 * Versionnage de la logique de sync (SYNC_LOGIC_VERSION) inclus dans l'empreinte :
   le correctif catégories de 0.6.1 s'applique aussi aux produits DÉJÀ synchronisés.

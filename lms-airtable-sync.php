@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: LMS Airtable Sync
- * Description: Synchronisation descendante (pull) Airtable → WooCommerce pour Le Marché Super. Récupère les produits depuis Airtable (base « Odoo Products », table « WEB | Products », vue « To Import WC ») et crée/met à jour les produits WooCommerce. Matching par un meta_key dédié contenant le Record ID Airtable.
- * Version: 0.6.2
+ * Description: Synchronisation descendante (pull) vers WooCommerce pour Le Marché Super. Source au choix : l'app (lms-app) ou Airtable. Récupère les produits depuis Airtable (base « Odoo Products », table « WEB | Products », vue « To Import WC ») et crée/met à jour les produits WooCommerce. Matching par un meta_key dédié contenant le Record ID Airtable.
+ * Version: 0.7.0
  * Author: Le Marché Super
  * Requires PHP: 7.4
  * Requires at least: 6.0
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Pas d'accès direct.
 }
 
-define( 'LMS_ATS_VERSION', '0.6.2' );
+define( 'LMS_ATS_VERSION', '0.7.0' );
 define( 'LMS_ATS_FILE', __FILE__ );
 define( 'LMS_ATS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LMS_ATS_URL', plugin_dir_url( __FILE__ ) );
@@ -27,6 +27,7 @@ define( 'LMS_ATS_CRON_HOOK', 'lms_ats_cron_sync' );
 
 require_once LMS_ATS_DIR . 'includes/class-lms-ats-settings.php';
 require_once LMS_ATS_DIR . 'includes/class-lms-ats-airtable-client.php';
+require_once LMS_ATS_DIR . 'includes/class-lms-ats-app-client.php';
 require_once LMS_ATS_DIR . 'includes/class-lms-ats-field-map.php';
 require_once LMS_ATS_DIR . 'includes/class-lms-ats-transforms.php';
 require_once LMS_ATS_DIR . 'includes/class-lms-ats-logger.php';

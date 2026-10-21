@@ -143,6 +143,54 @@ class LMS_ATS_Admin {
 			<input type="hidden" name="action" value="lms_ats_save">
 			<?php wp_nonce_field( self::NONCE ); ?>
 
+			<h2>Source du catalogue</h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row">D'où viennent les produits</th>
+					<td>
+						<label style="display:block;margin-bottom:6px">
+							<input type="radio" name="lms_ats[source]" value="airtable"
+								<?php checked( 'app' !== ( $s['source'] ?? 'airtable' ) ); ?>>
+							Airtable <span class="description">— la source historique</span>
+						</label>
+						<label style="display:block">
+							<input type="radio" name="lms_ats[source]" value="app"
+								<?php checked( 'app' === ( $s['source'] ?? 'airtable' ) ); ?>>
+							L'app (lms-app) <span class="description">— nouvelle source</span>
+						</label>
+						<p class="description">
+							Les deux servent exactement les mêmes champs : on peut basculer,
+							comparer le résultat, et revenir sans rien reconfigurer.
+							<br><strong>Avant de basculer pour de bon :</strong> cocher
+							« Simulation » plus bas, lancer une synchro, et lire le journal.
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="app_url">URL du flux</label></th>
+					<td>
+						<input name="lms_ats[app_url]" id="app_url" type="url" class="regular-text"
+							value="<?php echo esc_attr( $s['app_url'] ?? '' ); ?>"
+							placeholder="https://app.lemarchesuper.com/flux-web.php">
+						<p class="description">
+							Ajouter <code>?id=742</code> pour ne synchroniser qu'UNE fiche —
+							de quoi éprouver l'effet sur un seul article avant d'ouvrir le robinet.
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="app_key">Clé du flux</label></th>
+					<td>
+						<input name="lms_ats[app_key]" id="app_key" type="password" class="regular-text" autocomplete="off"
+							value="<?php echo esc_attr( $s['app_key'] ?? '' ); ?>">
+						<p class="description">
+							Le secret <code>FLUX_WEB_KEY</code>, dans l'app :
+							Gestion → Paramètres → API.
+						</p>
+					</td>
+				</tr>
+			</table>
+
 			<h2>Connexion Airtable</h2>
 			<table class="form-table" role="presentation">
 				<tr>
