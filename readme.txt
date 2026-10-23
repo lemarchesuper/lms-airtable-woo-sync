@@ -54,6 +54,9 @@ et ajouter un cron cPanel, par exemple toutes les 15 minutes :
 * Flux vide refusé (sinon la politique des absents viderait la boutique).
 * Flux partiel (?id= / ?limite=) : politique des absents NON appliquée — un test
   sur une fiche ne doit pas passer le reste du catalogue en brouillon.
+* Taxonomie reçue VIDE (champ présent, valeur « ») : le terme est retiré du
+  produit. C'est le « Sans label » choisi exprès dans l'app ; Airtable omet les
+  champs vides, son comportement est inchangé.
 
 = 0.6.2 =
 * Versionnage de la logique de sync (SYNC_LOGIC_VERSION) inclus dans l'empreinte :

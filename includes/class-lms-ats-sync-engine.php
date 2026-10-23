@@ -190,7 +190,10 @@ class LMS_ATS_Sync_Engine {
 				case 'taxonomy':
 					$taxonomy  = $rule['taxonomy'] ?? '';
 					$term_name = trim( (string) LMS_ATS_Transforms::scalar( $value ) );
-					if ( $taxonomy && '' !== $term_name ) {
+					/* Valeur VIDE mais présente : l'app dit « sans label, exprès »
+					   → on retire le terme. Airtable n'envoie jamais de champ vide
+					   (il l'omet) : son comportement ne change pas. */
+					if ( $taxonomy ) {
 						$tax[ $taxonomy ] = $term_name;
 					}
 					break;
@@ -287,6 +290,12 @@ class LMS_ATS_Sync_Engine {
 	 * Pose un terme de taxonomie sur le produit (crée le terme s'il manque).
 	 */
 	private function assign_term( $product_id, $taxonomy, $term_name ) {
+		if ( '' === $term_name ) {
+			if ( taxonomy_exists( $taxonomy ) ) {
+				wp_set_object_terms( $product_id, array(), $taxonomy, false );
+			}
+			return;
+		}
 		if ( ! taxonomy_exists( $taxonomy ) ) {
 			$this->messages[] = sprintf( 'Taxonomie « %s » inexistante (terme « %s » ignoré).', $taxonomy, $term_name );
 			return;
